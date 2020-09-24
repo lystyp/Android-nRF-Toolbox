@@ -29,9 +29,11 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.GridView;
 
 import no.nordicsemi.android.nrftoolbox.R;
@@ -45,6 +47,7 @@ public class UARTControlFragment extends Fragment implements GridView.OnItemClic
 	private UartConfiguration configuration;
 	private UARTButtonAdapter adapter;
 	private boolean editMode;
+	private Thread sendThread;
 
 	@Override
 	public void onAttach(@NonNull final Context context) {
@@ -85,6 +88,38 @@ public class UARTControlFragment extends Fragment implements GridView.OnItemClic
 		grid.setAdapter(adapter = new UARTButtonAdapter(configuration));
 		grid.setOnItemClickListener(this);
 		adapter.setEditMode(editMode);
+
+		Button btnSend = view.findViewById(R.id.action_send_continuously);
+		btnSend.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				if (sendThread == null) {
+					sendThread = new Thread(() -> {
+						try {
+							while (true) {
+								final UARTInterface uart = (UARTInterface) requireActivity();
+								uart.send("test");
+								Thread.sleep(100);
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					});
+					sendThread.start();
+				}
+			}
+		});
+
+		Button btnStop = view.findViewById(R.id.action_stop);
+		btnStop.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				if (sendThread != null) {
+					sendThread.interrupt();
+					sendThread = null;
+				}
+			}
+		});
 
 		return view;
 	}
